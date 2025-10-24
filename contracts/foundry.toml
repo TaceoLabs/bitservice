@@ -5,6 +5,10 @@ libs = ["lib"]
 
 fs_permissions = [{ access = "read", path = "./script/script-data/pubkey-list.hex"}, { access = "read", path = "./script/script-data/rp-public-key.hex"}]
 
+remappings = [
+    "world-id-protocol/=lib/world-id-protocol/contracts/src/tree/"
+]
+
 # Enable optimizer
 optimizer = true
 
