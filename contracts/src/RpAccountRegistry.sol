@@ -11,6 +11,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @title RpAccountRegistry
  * @notice Registry for managing accounts in a Binary Incremental Merkle Tree
  * @dev Uses World Protocol's BinaryIMT implementation for efficient merkle tree operations
+ *      Account index management is handled off-chain
  */
 contract RpAccountRegistry is
     Initializable,
@@ -30,32 +31,25 @@ contract RpAccountRegistry is
     /// @notice The depth of the merkle tree
     uint256 public constant TREE_DEPTH = 30; // Supports up to 2^30 accounts
 
-    /// @notice Mapping from account to leaf index (0 means not registered)
-    mapping(address => uint256) public accountToLeafIndex;
-
-    /// @notice Mapping from leaf index to account address
-    mapping(uint256 => address) public leafIndexToAccount;
-
-    /// @notice Counter for the next available leaf index
-    uint256 public nextLeafIndex;
+    /// @notice Counter for the next available account index
+    uint256 public nextAccountIndex;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event AccountAdded(address indexed account, uint256 indexed leafIndex, uint256 identityCommitment);
-    event AccountRemoved(address indexed account, uint256 indexed leafIndex);
-    event AccountUpdated(address indexed account, uint256 indexed leafIndex, uint256 newIdentityCommitment);
+    event AccountAdded(uint256 indexed accountIndex, uint256 identityCommitment);
+    event AccountRemoved(uint256 indexed accountIndex, uint256 identityCommitment);
+    event AccountUpdated(uint256 indexed accountIndex, uint256 oldIdentityCommitment, uint256 newIdentityCommitment);
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error AccountAlreadyExists();
-    error AccountDoesNotExist();
-    error InvalidProof();
     error InvalidIdentityCommitment();
-    error ZeroAddress();
+    error InvalidProof();
+    error EmptyArray();
+    error InvalidAccountIndex();
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -84,12 +78,8 @@ contract RpAccountRegistry is
         __EIP712_init(_name, _version);
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
-
-        // Initialize the tree with default zero values
         accountTree.initWithDefaultZeroes(TREE_DEPTH);
-
-        // Reserve index 0 (it represents "not registered")
-        nextLeafIndex = 1;
+        nextAccountIndex = 1;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -98,107 +88,85 @@ contract RpAccountRegistry is
 
     /**
      * @notice Adds an account to the registry
-     * @param account The address to add
      * @param identityCommitment The identity commitment for this account
-     * @return leafIndex The leaf index assigned to this account
      */
-    function addAccount(
-        address account,
-        uint256 identityCommitment
-    ) external onlyOwner returns (uint256 leafIndex) {
-        if (account == address(0)) revert ZeroAddress();
+    function addAccount(uint256 identityCommitment) external onlyOwner {
         if (identityCommitment == 0) revert InvalidIdentityCommitment();
-        if (accountToLeafIndex[account] != 0) revert AccountAlreadyExists();
 
-        leafIndex = nextLeafIndex++;
+        uint256 accountIndex = nextAccountIndex++;
 
-        // Store mappings
-        accountToLeafIndex[account] = leafIndex;
-        leafIndexToAccount[leafIndex] = account;
-
-        // Insert into tree
         accountTree.insert(identityCommitment);
 
-        emit AccountAdded(account, leafIndex, identityCommitment);
+        emit AccountAdded(accountIndex, identityCommitment);
     }
 
     /**
      * @notice Adds multiple accounts to the registry in batch
-     * @param accounts Array of addresses to add
      * @param identityCommitments Array of identity commitments
      */
-    function addAccountsBatch(
-        address[] calldata accounts,
-        uint256[] calldata identityCommitments
-    ) external onlyOwner {
-        require(accounts.length == identityCommitments.length, "Length mismatch");
+     // TODO: Make this more efficient by not looping twice..
+    function addAccountsBatch(uint256[] calldata identityCommitments) external onlyOwner {
+        if (identityCommitments.length == 0) revert EmptyArray();
 
-        for (uint256 i = 0; i < accounts.length; i++) {
-            if (accounts[i] == address(0)) revert ZeroAddress();
+        // Validate all commitments first
+        for (uint256 i = 0; i < identityCommitments.length; i++) {
             if (identityCommitments[i] == 0) revert InvalidIdentityCommitment();
-            if (accountToLeafIndex[accounts[i]] != 0) revert AccountAlreadyExists();
-
-            uint256 leafIndex = nextLeafIndex++;
-            accountToLeafIndex[accounts[i]] = leafIndex;
-            leafIndexToAccount[leafIndex] = accounts[i];
-
-            emit AccountAdded(accounts[i], leafIndex, identityCommitments[i]);
         }
 
-        // Insert all leaves at once for gas efficiency
+        uint256 startingIndex = nextAccountIndex;
+
         accountTree.insertMany(identityCommitments);
+
+        nextAccountIndex += identityCommitments.length;
+
+        // Emit events for each added account
+        for (uint256 i = 0; i < identityCommitments.length; i++) {
+            emit AccountAdded(startingIndex + i, identityCommitments[i]);
+        }
     }
 
     /**
      * @notice Updates an account's identity commitment
-     * @param account The account to update
+     * @param accountIndex The index of the account to update
      * @param oldIdentityCommitment The current identity commitment
      * @param newIdentityCommitment The new identity commitment
      * @param proofSiblings The merkle proof siblings
      */
     function updateAccount(
-        address account,
+        uint256 accountIndex,
         uint256 oldIdentityCommitment,
         uint256 newIdentityCommitment,
         uint256[] calldata proofSiblings
     ) external onlyOwner {
-        uint256 leafIndex = accountToLeafIndex[account];
-        if (leafIndex == 0) revert AccountDoesNotExist();
+        if (accountIndex >= nextAccountIndex) revert InvalidAccountIndex();
         if (newIdentityCommitment == 0) revert InvalidIdentityCommitment();
 
-        // Update in tree (index is leafIndex - 1 because tree is 0-indexed)
         accountTree.update(
-            leafIndex - 1,
+            accountIndex,
             oldIdentityCommitment,
             newIdentityCommitment,
             proofSiblings
         );
 
-        emit AccountUpdated(account, leafIndex, newIdentityCommitment);
+        emit AccountUpdated(accountIndex, oldIdentityCommitment, newIdentityCommitment);
     }
 
     /**
      * @notice Removes an account from the registry
-     * @param account The account to remove
+     * @param accountIndex The index of the account to remove
      * @param identityCommitment The identity commitment of the account
      * @param proofSiblings The merkle proof siblings
      */
     function removeAccount(
-        address account,
+        uint256 accountIndex,
         uint256 identityCommitment,
         uint256[] calldata proofSiblings
     ) external onlyOwner {
-        uint256 leafIndex = accountToLeafIndex[account];
-        if (leafIndex == 0) revert AccountDoesNotExist();
+        if (accountIndex >= nextAccountIndex) revert InvalidAccountIndex();
 
-        // Remove from tree (index is leafIndex - 1 because tree is 0-indexed)
-        accountTree.remove(leafIndex - 1, identityCommitment, proofSiblings);
+        accountTree.remove(accountIndex, identityCommitment, proofSiblings);
 
-        // Clear mappings
-        delete accountToLeafIndex[account];
-        delete leafIndexToAccount[leafIndex];
-
-        emit AccountRemoved(account, leafIndex);
+        emit AccountRemoved(accountIndex, identityCommitment);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -222,35 +190,19 @@ contract RpAccountRegistry is
     }
 
     /**
+     * @notice Gets the total number of accounts registered
+     * @return The number of accounts
+     */
+    function getTotalAccounts() external view returns (uint256) {
+        return nextAccountIndex;
+    }
+
+    /**
      * @notice Gets the number of leaves in the tree
-     * @return The number of leaves
+     * @return The number of leaves (includes removed accounts as zero values)
      */
     function getNumberOfLeaves() external view returns (uint256) {
         return accountTree.numberOfLeaves;
-    }
-
-    /**
-     * @notice Checks if an account is registered
-     * @param account The account to check
-     * @return Whether the account is registered
-     */
-    function isAccountRegistered(address account) external view returns (bool) {
-        return accountToLeafIndex[account] != 0;
-    }
-
-    /**
-     * @notice Gets account information
-     * @param account The account address
-     * @return leafIndex The leaf index (0 if not registered)
-     * @return isRegistered Whether the account is registered
-     */
-    function getAccountInfo(address account)
-        external
-        view
-        returns (uint256 leafIndex, bool isRegistered)
-    {
-        leafIndex = accountToLeafIndex[account];
-        isRegistered = leafIndex != 0;
     }
 
     /**
