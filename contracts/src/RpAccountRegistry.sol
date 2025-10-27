@@ -108,7 +108,6 @@ contract RpAccountRegistry is
     function addAccountsBatch(uint256[] calldata identityCommitments) external onlyOwner {
         if (identityCommitments.length == 0) revert EmptyArray();
 
-        // Validate all commitments first
         for (uint256 i = 0; i < identityCommitments.length; i++) {
             if (identityCommitments[i] == 0) revert InvalidIdentityCommitment();
         }
@@ -119,7 +118,6 @@ contract RpAccountRegistry is
 
         nextAccountIndex += identityCommitments.length;
 
-        // Emit events for each added account
         for (uint256 i = 0; i < identityCommitments.length; i++) {
             emit AccountAdded(startingIndex + i, identityCommitments[i]);
         }
@@ -142,7 +140,7 @@ contract RpAccountRegistry is
         if (newIdentityCommitment == 0) revert InvalidIdentityCommitment();
 
         accountTree.update(
-            accountIndex,
+            accountIndex - 1,
             oldIdentityCommitment,
             newIdentityCommitment,
             proofSiblings
@@ -164,7 +162,7 @@ contract RpAccountRegistry is
     ) external onlyOwner {
         if (accountIndex >= nextAccountIndex) revert InvalidAccountIndex();
 
-        accountTree.remove(accountIndex, identityCommitment, proofSiblings);
+        accountTree.remove(accountIndex - 1, identityCommitment, proofSiblings);
 
         emit AccountRemoved(accountIndex, identityCommitment);
     }
