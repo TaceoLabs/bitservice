@@ -27,9 +27,7 @@ contract RpAccountRegistryTest is Test {
         // Deploy proxy and initialize
         bytes memory initData = abi.encodeWithSelector(
             RpAccountRegistry.initialize.selector,
-            owner,
-            "RpAccountRegistry",
-            "1"
+            owner
         );
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
@@ -50,7 +48,7 @@ contract RpAccountRegistryTest is Test {
 
     function test_Initialize_RevertWhen_CalledTwice() public {
         vm.expectRevert();
-        registry.initialize(owner, "RpAccountRegistry", "1");
+        registry.initialize(owner);
     }
 
     /*//////////////////////////////////////////////////////////////

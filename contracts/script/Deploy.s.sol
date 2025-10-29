@@ -9,8 +9,6 @@ contract DeployRpAccountRegistry is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.envAddress("OWNER_ADDRESS");
-        string memory domainName = vm.envOr("DOMAIN_NAME", string("RpAccountRegistry"));
-        string memory domainVersion = vm.envOr("DOMAIN_VERSION", string("1"));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -18,9 +16,7 @@ contract DeployRpAccountRegistry is Script {
 
         bytes memory initData = abi.encodeWithSelector(
             RpAccountRegistry.initialize.selector,
-            owner,
-            domainName,
-            domainVersion
+            owner
         );
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);

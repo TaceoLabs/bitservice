@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import {BinaryIMT, BinaryIMTData} from "world-id-protocol/BinaryIMT.sol";
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -15,7 +14,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  */
 contract RpAccountRegistry is
     Initializable,
-    EIP712Upgradeable,
     Ownable2StepUpgradeable,
     UUPSUpgradeable
 {
@@ -67,15 +65,10 @@ contract RpAccountRegistry is
     /**
      * @notice Initializes the contract
      * @param _owner The address that will own the contract
-     * @param _name The EIP712 domain name
-     * @param _version The EIP712 domain version
      */
     function initialize(
-        address _owner,
-        string memory _name,
-        string memory _version
+        address _owner
     ) public initializer {
-        __EIP712_init(_name, _version);
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
         accountTree.initWithDefaultZeroes(TREE_DEPTH);
