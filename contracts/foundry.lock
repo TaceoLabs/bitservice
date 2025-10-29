@@ -10,5 +10,8 @@
       "name": "v5.4.0",
       "rev": "e725abddf1e01cf05ace496e950fc8e243cc7cab"
     }
+  },
+  "lib/world-id-protocol": {
+    "rev": "398a3e2ef23e4a5bb31abdcb87aff651bbb7f0db"
   }
 }

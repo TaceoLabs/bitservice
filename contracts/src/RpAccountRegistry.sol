@@ -70,6 +70,7 @@ contract RpAccountRegistry is
         address _owner
     ) public initializer {
         __Ownable_init(_owner);
+        __Ownable2Step_init();
         __UUPSUpgradeable_init();
         accountTree.initWithDefaultZeroes(TREE_DEPTH);
         nextAccountIndex = 1;
