@@ -1,0 +1,26 @@
+[profile.default]
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+remappings = [
+    "world-id-protocol/=lib/world-id-protocol/contracts/src/tree/"
+]
+
+# Enable optimizer
+optimizer = true
+
+# How aggressively to optimize (higher = more runtime-opt, bigger bytecode)
+optimizer_runs = 10000000
+
+via_ir = true
+memory_limit = 1073741824
+gas_limit = "18446744073709551615"
+
+
+[lint]
+exclude_lints = ["screaming-snake-case-const"]
