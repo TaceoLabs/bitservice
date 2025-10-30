@@ -219,4 +219,22 @@ contract RpAccountRegistry is
         override
         onlyOwner
     {}
+
+
+    /*////////////////////////////////////////////////////////////
+                        STORAGE GAP
+    ////////////////////////////////////////////////////////////*/
+
+    /**
+     *
+     *
+     * @dev Storage gap to allow for future upgrades without storage collisions
+     *
+     *
+     * This is set to take a total of 50 storage slots for future state variables
+     *
+     *
+     */
+
+    uint256[43] private __gap;
 }
