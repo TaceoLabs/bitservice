@@ -15,8 +15,6 @@ async fn main() -> eyre::Result<ExitCode> {
 
     let config = BitserviceClientConfig::parse();
 
-    let client = reqwest::Client::new();
-
     let read_program = ultrahonk::get_program_artifact(&config.oblivious_map_read_circuit_path)?;
     let (_, read_pk, _) = r1cs::setup_r1cs(read_program, &mut StdRng::from_seed([0; 32]))?;
 
@@ -26,7 +24,7 @@ async fn main() -> eyre::Result<ExitCode> {
     if config.public_key_paths.len() != 3 {
         eyre::bail!("must provide exactly 3 public key paths");
     }
-    let public_keys = config
+    let peer_public_keys = config
         .public_key_paths
         .into_iter()
         .map(|path| {
@@ -38,50 +36,43 @@ async fn main() -> eyre::Result<ExitCode> {
         .try_into()
         .expect("len is 3");
 
+    let client = bitservice_client::Client::new(
+        reqwest::Client::new(),
+        config.server_url,
+        config.rp_id,
+        peer_public_keys,
+        read_pk.vk,
+        write_pk.vk,
+    );
+
     let mut rng = rand::thread_rng();
 
     match config.command {
         BitserviceClientCommand::Read => {
-            let value = bitservice_client::read(
-                &client,
-                &config.server_url,
-                &public_keys,
-                &read_pk.vk,
-                config.rp_id,
-                config.key,
-                ark_bn254::Fr::rand(&mut rng),
-                &mut rng,
-            )
-            .await?;
+            let value = client
+                .read(config.key, ark_bn254::Fr::rand(&mut rng), &mut rng)
+                .await?;
             tracing::info!("value = {value}");
         }
         BitserviceClientCommand::Ban => {
-            bitservice_client::ban(
-                &client,
-                &config.server_url,
-                &public_keys,
-                &write_pk.vk,
-                config.rp_id,
-                config.key,
-                ark_bn254::Fr::rand(&mut rng),
-                ark_bn254::Fr::rand(&mut rng),
-                &mut rng,
-            )
-            .await?;
+            client
+                .ban(
+                    config.key,
+                    ark_bn254::Fr::rand(&mut rng),
+                    ark_bn254::Fr::rand(&mut rng),
+                    &mut rng,
+                )
+                .await?;
         }
         BitserviceClientCommand::Unban => {
-            bitservice_client::unban(
-                &client,
-                &config.server_url,
-                &public_keys,
-                &write_pk.vk,
-                config.rp_id,
-                config.key,
-                ark_bn254::Fr::rand(&mut rng),
-                ark_bn254::Fr::rand(&mut rng),
-                &mut rng,
-            )
-            .await?;
+            client
+                .unban(
+                    config.key,
+                    ark_bn254::Fr::rand(&mut rng),
+                    ark_bn254::Fr::rand(&mut rng),
+                    &mut rng,
+                )
+                .await?;
         }
     }
 

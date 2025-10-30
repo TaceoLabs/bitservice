@@ -12,6 +12,9 @@ dev-down:
 unit-tests:
     cargo test --release --all-features --lib
 
+integration-tests:
+    cargo test --release --package bitservice-test
+
 all-tests:
     cargo test --release --all-features
 

@@ -3,6 +3,7 @@ members = [
     "bitservice-client",
     "bitservice-peer",
     "bitservice-server",
+    "bitservice-test",
     "bitservice-types",
     "tcp-mpc-net",
     "ws-mpc-net",
@@ -31,6 +32,9 @@ axum-test = "18"
 base64 = "0.22"
 bincode = "2"
 bitservice-types = { path = "bitservice-types" }
+bitservice-peer = { path = "bitservice-peer" }
+bitservice-server = { path = "bitservice-server" }
+bitservice-client = { path = "bitservice-client" }
 clap = "4"
 co-noir-to-r1cs = { version = "0.1.0", git = "https://github.com/TaceoLabs/CoNoir-to-R1CS", rev = "23f2e5e" }
 crypto_box = "0.9"
