@@ -42,6 +42,7 @@ pub(crate) enum ApiErrors {
     #[error("an explicit error was returned: {0:?}")]
     ExplicitError(ApiError),
     #[error("Cannot find resource: \"{0}\"")]
+    #[expect(dead_code)]
     NotFound(String),
     #[error("Bad request: \"{0}\"")]
     BadRequest(String),

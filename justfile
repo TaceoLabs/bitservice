@@ -49,6 +49,11 @@ run-server:
     trap "kill $pid" SIGINT SIGTERM
     wait $pid
 
+run-setup:
+    #!/usr/bin/env bash
+    just run-server &
+    just run-peers
+
 run-client *args:
     cargo build --workspace --release
     ./target/release/bitservice-client --public-key-paths ./dev-keys/peer0.pk,./dev-keys/peer1.pk,./dev-keys/peer2.pk {{args}}

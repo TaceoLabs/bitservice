@@ -69,43 +69,44 @@ impl WsSessions {
         }
         Ok(())
     }
-}
 
-pub async fn handle_ws_request(
-    pending_websockets: WsSessions,
-    headers: HeaderMap,
-    ws: WebSocketUpgrade,
-) -> axum::response::Result<Response> {
-    let session_id = Uuid::from_str(
-        headers
-            .get(SESSION_ID_HEADER)
-            .ok_or_else(|| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    format!("missing header \"{SESSION_ID_HEADER}\""),
-                )
-            })?
-            .to_str()
-            .map_err(|_| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    format!("invalid header value for \"{SESSION_ID_HEADER}\""),
-                )
-            })?,
-    )
-    .map_err(|_| {
-        (
-            StatusCode::BAD_REQUEST,
-            format!("invalid header value for \"{SESSION_ID_HEADER}\""),
+    pub async fn handle_ws_request(
+        &self,
+        headers: HeaderMap,
+        ws: WebSocketUpgrade,
+    ) -> axum::response::Result<Response> {
+        let session_id = Uuid::from_str(
+            headers
+                .get(SESSION_ID_HEADER)
+                .ok_or_else(|| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        format!("missing header \"{SESSION_ID_HEADER}\""),
+                    )
+                })?
+                .to_str()
+                .map_err(|_| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        format!("invalid header value for \"{SESSION_ID_HEADER}\""),
+                    )
+                })?,
         )
-    })?;
-    tracing::debug!("ws upgrade for session {session_id}");
-    let response = ws.on_upgrade(move |socket| async move {
-        if let Err(err) = pending_websockets.insert(session_id, socket).await {
-            tracing::warn!("failed to insert pending websocket: {err:?}");
-        }
-    });
-    Ok(response)
+        .map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("invalid header value for \"{SESSION_ID_HEADER}\""),
+            )
+        })?;
+        tracing::debug!("ws upgrade for session {session_id}");
+        let sessions = self.clone();
+        let response = ws.on_upgrade(move |socket| async move {
+            if let Err(err) = sessions.insert(session_id, socket).await {
+                tracing::warn!("failed to insert pending websocket: {err:?}");
+            }
+        });
+        Ok(response)
+    }
 }
 
 pub async fn ws_connect(ws_url: &str, session_id: Uuid) -> eyre::Result<ClientWsStream> {

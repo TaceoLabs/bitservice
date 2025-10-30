@@ -44,6 +44,7 @@ pub(crate) enum ApiErrors {
     #[error("Cannot find resource: \"{0}\"")]
     NotFound(String),
     #[error("Bad request: \"{0}\"")]
+    #[expect(dead_code)]
     BadRequest(String),
     #[error(transparent)]
     InternalSeverError(#[from] eyre::Report),

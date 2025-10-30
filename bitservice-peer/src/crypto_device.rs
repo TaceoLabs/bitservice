@@ -20,13 +20,13 @@ pub struct CryptoDevice {
 }
 
 impl CryptoDevice {
-    pub fn new(secret_key_path: impl AsRef<Path>) -> Result<Self> {
+    pub(crate) fn new(secret_key_path: impl AsRef<Path>) -> Result<Self> {
         let sk_bytes = std::fs::read(secret_key_path)?;
         let sk = crypto_box::SecretKey::from_slice(&sk_bytes)?;
         Ok(Self { sk })
     }
 
-    pub fn unseal(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
+    pub(crate) fn unseal(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
         Ok(self.sk.unseal(ciphertext)?)
     }
 }
