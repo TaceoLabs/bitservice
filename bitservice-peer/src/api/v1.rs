@@ -11,23 +11,17 @@ use axum::{
     response::Response,
     routing::{any, post},
 };
-use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bitservice_types::{
     ban::{PeerBanRequest, PeerBanResponse},
     prune::{PeerPruneRequest, PeerPruneResponse},
     read::{PeerReadRequest, PeerReadResponse},
+    unban::{PeerUnbanRequest, PeerUnbanResponse},
 };
 use http::HeaderMap;
-use oblivious_linear_scan_map::{ObliviousReadRequest, ObliviousUpdateRequest};
-use serde::de::DeserializeOwned;
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::{
-    AppState,
-    api::errors::{ApiErrors, ApiResult},
-    crypto_device::CryptoDevice,
-};
+use crate::{AppState, api::errors::ApiResult};
 
 /// Build the v1 API router.
 ///
@@ -56,28 +50,9 @@ async fn read(
     Json(req): Json<PeerReadRequest>,
 ) -> ApiResult<Json<PeerReadResponse>> {
     tracing::debug!("received read request {request_id}");
-    let key = decode_unseal_deser(&state.crypto_device, &req.key, "key")?;
-    let r = decode_unseal_deser(&state.crypto_device, &req.r, "r")?;
-
-    let res = state
-        .ban_service
-        .read(
-            ObliviousReadRequest {
-                key,
-                randomness_commitment: r,
-            },
-            request_id,
-        )
-        .await?;
-
+    let res = state.ban_service.read(req, request_id).await?;
     tracing::debug!("handled read request {request_id}");
-
-    Ok(Json(PeerReadResponse {
-        value: res.read,
-        proof: res.proof.into(),
-        root: res.root,
-        commitment: res.commitment,
-    }))
+    Ok(Json(res))
 }
 
 #[instrument(level = "debug", skip_all, fields(request_id = %request_id))]
@@ -87,69 +62,21 @@ async fn ban(
     Json(req): Json<PeerBanRequest>,
 ) -> ApiResult<Json<PeerBanResponse>> {
     tracing::debug!("received ban request {request_id}");
-    let key = decode_unseal_deser(&state.crypto_device, &req.key, "key")?;
-    let value = decode_unseal_deser(&state.crypto_device, &req.value, "value")?;
-    let r_key = decode_unseal_deser(&state.crypto_device, &req.r_key, "r_key")?;
-    let r_value = decode_unseal_deser(&state.crypto_device, &req.r_value, "r_value")?;
-
-    let res = state
-        .ban_service
-        .ban(
-            ObliviousUpdateRequest {
-                key,
-                update_value: value,
-                randomness_index: r_key,
-                randomness_commitment: r_value,
-            },
-            request_id,
-        )
-        .await?;
-
+    let res = state.ban_service.ban(req, request_id).await?;
     tracing::debug!("handled ban request {request_id}");
-
-    Ok(Json(PeerBanResponse {
-        proof: res.proof.into(),
-        old_root: res.old_root,
-        new_root: res.new_root,
-        commitment_key: res.commitment_key,
-        commitment_value: res.commitment_value,
-    }))
+    Ok(Json(res))
 }
 
 #[instrument(level = "debug", skip_all, fields(request_id = %request_id))]
 async fn unban(
     State(state): State<AppState>,
     Path(request_id): Path<Uuid>,
-    Json(req): Json<PeerBanRequest>,
-) -> ApiResult<Json<PeerBanResponse>> {
+    Json(req): Json<PeerUnbanRequest>,
+) -> ApiResult<Json<PeerUnbanResponse>> {
     tracing::debug!("received unban request {request_id}");
-    let key = decode_unseal_deser(&state.crypto_device, &req.key, "key")?;
-    let value = decode_unseal_deser(&state.crypto_device, &req.value, "value")?;
-    let r_key = decode_unseal_deser(&state.crypto_device, &req.r_key, "r_key")?;
-    let r_value = decode_unseal_deser(&state.crypto_device, &req.r_value, "r_value")?;
-
-    let res = state
-        .ban_service
-        .unban(
-            ObliviousUpdateRequest {
-                key,
-                update_value: value,
-                randomness_index: r_key,
-                randomness_commitment: r_value,
-            },
-            request_id,
-        )
-        .await?;
-
+    let res = state.ban_service.unban(req, request_id).await?;
     tracing::debug!("handled unban request {request_id}");
-
-    Ok(Json(PeerBanResponse {
-        proof: res.proof.into(),
-        old_root: res.old_root,
-        new_root: res.new_root,
-        commitment_key: res.commitment_key,
-        commitment_value: res.commitment_value,
-    }))
+    Ok(Json(res))
 }
 
 #[instrument(level = "debug", skip_all, fields(request_id = %request_id))]
@@ -179,20 +106,4 @@ async fn ws_handler(
         .ws_sessions
         .handle_ws_request(headers, ws)
         .await
-}
-
-fn decode_unseal_deser<T: DeserializeOwned>(
-    crypto_device: &CryptoDevice,
-    base64: &str,
-    field: &str,
-) -> ApiResult<T> {
-    let ciphertext = STANDARD
-        .decode(base64)
-        .map_err(|_| ApiErrors::BadRequest(format!("invalid \"{field}\" base64")))?;
-    let bytes = crypto_device
-        .unseal(&ciphertext)
-        .map_err(|_| ApiErrors::BadRequest(format!("invalid \"{field}\" ciphertext")))?;
-    let (value, _) = bincode::serde::decode_from_slice::<T, _>(&bytes, bincode::config::standard())
-        .map_err(|_| ApiErrors::BadRequest(format!("invalid \"{field}\" share bytes")))?;
-    Ok(value)
 }

@@ -4,12 +4,18 @@ use std::{
     time::{Duration, Instant},
 };
 
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use bitservice_types::{
+    ban::{PeerBanRequest, PeerBanResponse},
+    read::{PeerReadRequest, PeerReadResponse},
+    unban::{PeerUnbanRequest, PeerUnbanResponse},
+};
 use mpc_core::protocols::rep3::{Rep3State, conversion::A2BType, id::PartyID};
 use oblivious_linear_scan_map::{
-    Groth16Material, LinearScanObliviousMap, ObliviousReadRequest, ObliviousReadResult,
-    ObliviousUpdateRequest, ObliviousWriteResult,
+    Groth16Material, LinearScanObliviousMap, ObliviousReadRequest, ObliviousUpdateRequest,
 };
 use rand::{Rng as _, SeedableRng as _, rngs::StdRng};
+use serde::de::DeserializeOwned;
 use tcp_mpc_net::{TcpNetwork, TcpSessions};
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
@@ -17,7 +23,7 @@ use tracing::instrument;
 use uuid::Uuid;
 use ws_mpc_net::{WebSocketNetwork, WsSessions};
 
-use crate::repository::DbPool;
+use crate::{crypto_device::CryptoDevice, repository::DbPool};
 
 #[derive(Clone)]
 pub(crate) struct BanService {
@@ -32,6 +38,7 @@ pub(crate) struct BanService {
     oblivious_map: Arc<RwLock<LinearScanObliviousMap>>,
     read_groth16: Arc<Groth16Material>,
     write_groth16: Arc<Groth16Material>,
+    crypto_device: Arc<CryptoDevice>,
     db: Arc<DbPool>,
 }
 
@@ -45,6 +52,7 @@ impl BanService {
         prev_peer_wait_timeout: Duration,
         read_groth16: Groth16Material,
         write_groth16: Groth16Material,
+        crypto_device: Arc<CryptoDevice>,
         db: DbPool,
     ) -> eyre::Result<Self> {
         let oblivious_map = if let Some(oblivious_map) = db.load_map().await? {
@@ -67,15 +75,23 @@ impl BanService {
             oblivious_map: Arc::new(RwLock::new(oblivious_map)),
             read_groth16: Arc::new(read_groth16),
             write_groth16: Arc::new(write_groth16),
+            crypto_device,
             db: Arc::new(db),
         })
     }
 
     pub(crate) async fn read(
         &self,
-        req: ObliviousReadRequest,
+        req: PeerReadRequest,
         request_id: Uuid,
-    ) -> eyre::Result<ObliviousReadResult> {
+    ) -> eyre::Result<PeerReadResponse> {
+        let key = decode_unseal_deser(&self.crypto_device, &req.key, "key")?;
+        let r = decode_unseal_deser(&self.crypto_device, &req.r, "r")?;
+        let req = ObliviousReadRequest {
+            key,
+            randomness_commitment: r,
+        };
+
         let cancellation_token = CancellationToken::new();
         let (net0, net1) = self
             .init_ws_mpc_nets(request_id, cancellation_token.clone())
@@ -92,14 +108,30 @@ impl BanService {
 
         cancellation_token.cancel();
 
-        Ok(res)
+        Ok(PeerReadResponse {
+            value: res.read,
+            proof: res.proof.into(),
+            root: res.root,
+            commitment: res.commitment,
+        })
     }
 
     pub(crate) async fn ban(
         &self,
-        req: ObliviousUpdateRequest,
+        req: PeerBanRequest,
         request_id: Uuid,
-    ) -> eyre::Result<ObliviousWriteResult> {
+    ) -> eyre::Result<PeerBanResponse> {
+        let key = decode_unseal_deser(&self.crypto_device, &req.key, "key")?;
+        let value = decode_unseal_deser(&self.crypto_device, &req.value, "value")?;
+        let r_key = decode_unseal_deser(&self.crypto_device, &req.r_key, "r_key")?;
+        let r_value = decode_unseal_deser(&self.crypto_device, &req.r_value, "r_value")?;
+        let req = ObliviousUpdateRequest {
+            key,
+            update_value: value,
+            randomness_index: r_key,
+            randomness_commitment: r_value,
+        };
+
         let cancellation_token = CancellationToken::new();
         let (net0, net1) = self
             .init_ws_mpc_nets(request_id, cancellation_token.clone())
@@ -125,14 +157,31 @@ impl BanService {
         tracing::debug!("store map in db");
         self.db.store_map(&oblivious_map).await?;
 
-        Ok(res)
+        Ok(PeerBanResponse {
+            proof: res.proof.into(),
+            old_root: res.old_root,
+            new_root: res.new_root,
+            commitment_key: res.commitment_key,
+            commitment_value: res.commitment_value,
+        })
     }
 
     pub(crate) async fn unban(
         &self,
-        req: ObliviousUpdateRequest,
+        req: PeerUnbanRequest,
         request_id: Uuid,
-    ) -> eyre::Result<ObliviousWriteResult> {
+    ) -> eyre::Result<PeerUnbanResponse> {
+        let key = decode_unseal_deser(&self.crypto_device, &req.key, "key")?;
+        let value = decode_unseal_deser(&self.crypto_device, &req.value, "value")?;
+        let r_key = decode_unseal_deser(&self.crypto_device, &req.r_key, "r_key")?;
+        let r_value = decode_unseal_deser(&self.crypto_device, &req.r_value, "r_value")?;
+        let req = ObliviousUpdateRequest {
+            key,
+            update_value: value,
+            randomness_index: r_key,
+            randomness_commitment: r_value,
+        };
+
         let cancellation_token = CancellationToken::new();
         let (net0, net1) = self
             .init_ws_mpc_nets(request_id, cancellation_token.clone())
@@ -152,7 +201,13 @@ impl BanService {
         tracing::debug!("store map in db");
         self.db.store_map(&oblivious_map).await?;
 
-        Ok(res)
+        Ok(PeerUnbanResponse {
+            proof: res.proof.into(),
+            old_root: res.old_root,
+            new_root: res.new_root,
+            commitment_key: res.commitment_key,
+            commitment_value: res.commitment_value,
+        })
     }
 
     #[instrument(level = "debug", skip_all, fields(request_id = %request_id))]
@@ -248,4 +303,20 @@ impl BanService {
         )?;
         Ok((net0, net1))
     }
+}
+
+fn decode_unseal_deser<T: DeserializeOwned>(
+    crypto_device: &CryptoDevice,
+    base64: &str,
+    field: &str,
+) -> eyre::Result<T> {
+    let ciphertext = STANDARD
+        .decode(base64)
+        .map_err(|_| eyre::eyre!("invalid {field} base64"))?;
+    let bytes = crypto_device
+        .unseal(&ciphertext)
+        .map_err(|_| eyre::eyre!("invalid {field} ciphertext"))?;
+    let (value, _) = bincode::serde::decode_from_slice::<T, _>(&bytes, bincode::config::standard())
+        .map_err(|_| eyre::eyre!("invalid {field} share bytes"))?;
+    Ok(value)
 }

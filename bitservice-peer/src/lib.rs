@@ -25,7 +25,6 @@ pub(crate) mod repository;
 #[derive(Clone)]
 pub(crate) struct AppState {
     ban_service: BanService,
-    crypto_device: Arc<CryptoDevice>,
 }
 
 pub async fn start(config: BitservicePeerConfig) -> eyre::Result<()> {
@@ -52,11 +51,10 @@ pub async fn start(config: BitservicePeerConfig) -> eyre::Result<()> {
             config.prev_peer_wait_timeout,
             read_groth16,
             write_groth16,
+            crypto_device,
             db,
         )
         .await?,
-
-        crypto_device,
     };
     let app = api::new_app(app_state);
 
