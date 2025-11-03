@@ -8,7 +8,8 @@ out = "out"
 libs = ["lib"]
 
 remappings = [
-    "world-id-protocol/=lib/world-id-protocol/contracts/src/tree/"
+    "world-id-protocol/=lib/world-id-protocol/contracts/src/tree/",
+    "world-poseidon2/=lib/world-id-protocol/contracts/src/hash/"
 ]
 
 # Enable optimizer

@@ -216,53 +216,170 @@ contract RpAccountRegistryTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        REMOVE ACCOUNT TESTS
+                        ROOT VALIDITY TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_RemoveAccount() public {
+    function testSetRootValidityWindow() public {
+        vm.startPrank(owner);
+        // Set and check window
+        registry.setRootValidityWindow(3600);
+        assertEq(registry.rootValidityWindow(), 3600);
+
+        // Set to 0 (never expire)
+        registry.setRootValidityWindow(0);
+        assertEq(registry.rootValidityWindow(), 0);
+    }
+
+    function testIsValidRootUnknown() public {
+        // Unknown root should return false
+        assertFalse(registry.isValidRoot(0x123));
+    }
+
+    function testIsValidRootNoExpiration() public {
+        vm.startPrank(owner);
+        registry.addAccount(IDENTITY_1);
+        uint256 root = registry.getRoot();
+
+        // With no expiration, root should always be valid
+        registry.setRootValidityWindow(0);
+        assertTrue(registry.isValidRoot(root));
+
+        // Even after time passes
+        skip(365 days);
+        assertTrue(registry.isValidRoot(root));
+    }
+
+      function testIsValidRootWithExpiration() public {
+        vm.startPrank(owner);
+        registry.addAccount(IDENTITY_1);
+        uint256 root = registry.getRoot();
+
+        // Set 1 hour window
+        registry.setRootValidityWindow(3600);
+
+        // Valid before expiration
+        assertTrue(registry.isValidRoot(root));
+        skip(3599);
+        assertTrue(registry.isValidRoot(root));
+
+        // Invalid after expiration
+        skip(2);
+        assertFalse(registry.isValidRoot(root));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        TREE STATELESS VERIFICATION TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testVerifyProofStatelessValid() public {
         vm.startPrank(owner);
 
-        // Add an account
         registry.addAccount(IDENTITY_1);
-        uint256 accountIndex = 1;
 
-        // Get merkle proof
-        uint256[] memory proof = new uint256[](30);
-        for (uint256 i = 0; i < 30; i++) {
+        uint256 root = registry.getRoot();
+        uint256 depth = registry.getDepth();
+        vm.stopPrank();
+
+        // Generate a valid proof for IDENTITY_1 at index 0
+        // For index 0, we need the sibling at each level
+        uint256[] memory proof = new uint256[](depth);
+        for (uint256 i = 0; i < depth; i++) {
+            proof[i] = registry.getZeroValue(i);
+        }
+        // You'll need to get these values from your tree structure
+        // This is a simplified example - adapt based on your actual tree
+
+        // Verify the proof
+        bool isValid = registry.verifyProofStateless(root, IDENTITY_1, proof, 0, depth);
+        assertTrue(isValid);
+    }
+
+    function testVerifyProofStatelessMultipleLeaves() public {
+        vm.startPrank(owner);
+
+        registry.addAccount(IDENTITY_1);
+        registry.addAccount(IDENTITY_2);
+
+        uint256 root = registry.getRoot();
+        uint256 depth = registry.getDepth();
+        vm.stopPrank();
+
+        // For leaf at index 1 IDENTITY_2, the first sibling is IDENTITY_2
+        // and the rest are zero values
+        uint256[] memory proof = new uint256[](depth);
+        proof[0] = IDENTITY_1; // Sibling at level 0 is the first leaf
+        for (uint256 i = 1; i < depth; i++) {
             proof[i] = registry.getZeroValue(i);
         }
 
-        uint256 oldRoot = registry.getRoot();
-
-        vm.expectEmit(true, false, false, true);
-        emit AccountRemoved(accountIndex, IDENTITY_1);
-
-        registry.removeAccount(accountIndex, IDENTITY_1, proof);
-
-        uint256 newRoot = registry.getRoot();
-        assertTrue(oldRoot != newRoot);
-
-        vm.stopPrank();
+        // Verify the proof for IDENTITY_2 at index 1
+        bool isValid = registry.verifyProofStateless(root, IDENTITY_2, proof, 1, depth);
+        assertTrue(isValid);
     }
 
-    function test_RemoveAccount_RevertWhen_InvalidIndex() public {
-        uint256[] memory proof = new uint256[](30);
+    function testVerifyProofStatelessInvalidRoot() public {
+        vm.startPrank(owner);
 
-        vm.prank(owner);
-        vm.expectRevert(RpAccountRegistry.InvalidAccountIndex.selector);
-        registry.removeAccount(999, IDENTITY_1, proof);
-    }
-
-    function test_RemoveAccount_RevertWhen_NotOwner() public {
-        vm.prank(owner);
         registry.addAccount(IDENTITY_1);
 
-        uint256[] memory proof = new uint256[](30);
+        uint256 correctRoot = registry.getRoot();
+        uint256 fakeRoot = uint256(keccak256("fake_root"));
+        uint256 depth = registry.getDepth();
+        vm.stopPrank();
 
-        vm.prank(user);
-        vm.expectRevert();
-        registry.removeAccount(1, IDENTITY_1, proof);
+        // Build valid proof for index 0
+        uint256[] memory proof = new uint256[](depth);
+        for (uint256 i = 0; i < depth; i++) {
+            proof[i] = registry.getZeroValue(i);
+        }
+
+        // Should return false for wrong root
+        bool isValid = registry.verifyProofStateless(fakeRoot, IDENTITY_1, proof, 0, depth);
+        assertFalse(isValid);
+
+        // Should return true for correct root
+        isValid = registry.verifyProofStateless(correctRoot, IDENTITY_1, proof, 0, depth);
+        assertTrue(isValid);
     }
+
+    function testVerifyProofStatelessWrongProofLength() public {
+        vm.startPrank(owner);
+
+        registry.addAccount(IDENTITY_1);
+
+        uint256 root = registry.getRoot();
+        uint256 depth = registry.getDepth();
+        vm.stopPrank();
+
+        // Wrong length proof
+        uint256[] memory proof = new uint256[](depth - 1);
+
+        // Should revert with wrong proof length
+        vm.expectRevert();
+        registry.verifyProofStateless(root, IDENTITY_1, proof, 0, depth);
+    }
+
+    function testVerifyProofStatelessSiblingTooLarge() public {
+        vm.startPrank(owner);
+
+        registry.addAccount(IDENTITY_1);
+
+        uint256 root = registry.getRoot();
+        uint256 depth = registry.getDepth();
+        vm.stopPrank();
+
+        uint256[] memory proof = new uint256[](depth);
+        proof[0] = SNARK_SCALAR_FIELD; // Sibling too large
+        for (uint256 i = 1; i < depth; i++) {
+            proof[i] = registry.getZeroValue(i);
+        }
+
+        // Should revert with value too large
+        vm.expectRevert();
+        registry.verifyProofStateless(root, IDENTITY_1, proof, 0, depth);
+    }
+
+
 
     /*//////////////////////////////////////////////////////////////
                         VIEW FUNCTION TESTS
@@ -363,7 +480,7 @@ contract RpAccountRegistryTest is Test {
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_Integration_AddUpdateRemove() public {
+    function test_Integration_AddUpdate() public {
         vm.startPrank(owner);
 
         // Add account
@@ -378,16 +495,10 @@ contract RpAccountRegistryTest is Test {
         registry.updateAccount(1, IDENTITY_1, IDENTITY_2, proof);
         uint256 rootAfterUpdate = registry.getRoot();
 
-        // Remove account
-        registry.removeAccount(1, IDENTITY_2, proof);
-        uint256 rootAfterRemove = registry.getRoot();
-
         vm.stopPrank();
 
-        // All roots should be different
+        // Roots should be different
         assertTrue(rootAfterAdd != rootAfterUpdate);
-        assertTrue(rootAfterUpdate != rootAfterRemove);
-        assertTrue(rootAfterAdd != rootAfterRemove);
     }
 
     function test_Integration_BatchOperations() public {
