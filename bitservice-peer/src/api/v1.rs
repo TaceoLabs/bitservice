@@ -81,12 +81,13 @@ async fn unban(
 
 #[instrument(level = "debug", skip_all, fields(request_id = %request_id))]
 async fn prune(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(request_id): Path<Uuid>,
     Json(_req): Json<PeerPruneRequest>,
 ) -> ApiResult<Json<PeerPruneResponse>> {
     tracing::debug!("received prune request {request_id}");
-
+    state.ban_service.prune(request_id).await?;
+    tracing::debug!("handled prune request {request_id}");
     Ok(Json(PeerPruneResponse {}))
 }
 

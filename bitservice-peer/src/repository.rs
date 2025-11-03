@@ -1,6 +1,5 @@
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use eyre::Context as _;
-use oblivious_linear_scan_map::LinearScanObliviousMap;
+use oblivious_linear_scan_map::{Groth16Material, LinearScanObliviousMap};
 use sqlx::{PgPool, Row, migrate::Migrator, postgres::PgPoolOptions};
 
 static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
@@ -25,30 +24,45 @@ impl DbPool {
         Ok(Self { pool })
     }
 
-    pub(crate) async fn load_map(&self) -> eyre::Result<Option<LinearScanObliviousMap>> {
+    pub(crate) async fn load_or_init_map(
+        &self,
+        read_groth16: Groth16Material,
+        write_groth16: Groth16Material,
+    ) -> eyre::Result<LinearScanObliviousMap> {
         let row = sqlx::query("SELECT data FROM map WHERE id = 0")
             .fetch_optional(&self.pool)
             .await?;
         if let Some(row) = row {
+            tracing::debug!("loading map from db");
             let data = row.get::<Vec<u8>, _>("data");
-            Ok(Some(LinearScanObliviousMap::deserialize_uncompressed(
+            let oblivious_map = LinearScanObliviousMap::from_dump(
                 data.as_slice(),
-            )?))
+                ark_serialize::Compress::No,
+                ark_serialize::Validate::No,
+                read_groth16,
+                write_groth16,
+            )?;
+            Ok(oblivious_map)
         } else {
-            Ok(None)
+            tracing::debug!("init empty map in db");
+            let oblivious_map = LinearScanObliviousMap::new(read_groth16, write_groth16);
+            self.store_map(&oblivious_map).await?;
+            Ok(oblivious_map)
         }
     }
 
-    pub(crate) async fn store_map(&self, map: &LinearScanObliviousMap) -> eyre::Result<()> {
+    pub(crate) async fn store_map(
+        &self,
+        oblivious_map: &LinearScanObliviousMap,
+    ) -> eyre::Result<()> {
         let mut data = Vec::new();
-        map.serialize_uncompressed(&mut data)?;
+        oblivious_map.dump(&mut data, ark_serialize::Compress::No)?;
         sqlx::query(
             "
             INSERT INTO map (id, data)
             VALUES (0, $1)
             ON CONFLICT(id)
-            DO UPDATE SET
-                data = EXCLUDED.data;
+            DO UPDATE SET data = EXCLUDED.data;
             ",
         )
         .bind(data)

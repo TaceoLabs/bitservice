@@ -36,7 +36,7 @@ bitservice-peer = { path = "bitservice-peer" }
 bitservice-server = { path = "bitservice-server" }
 bitservice-client = { path = "bitservice-client" }
 clap = "4"
-co-noir-to-r1cs = { version = "0.1.0", git = "https://github.com/TaceoLabs/CoNoir-to-R1CS", rev = "23f2e5e" }
+co-noir-to-r1cs = { version = "0.1.0", git = "https://github.com/TaceoLabs/CoNoir-to-R1CS", rev = "ac58c2b" }
 crypto_box = "0.9"
 eyre = { version = "0.6" }
 futures = "0.3"
@@ -48,7 +48,7 @@ metrics = "0.24"
 mpc-core = { git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
 mpc-net = { git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969", default-features = false }
 nodes-telemetry = { git = "https://github.com/TaceoLabs/nodes-telemetry.git", rev = "06f4f13"}
-oblivious-linear-scan-map = { git = "https://github.com/TaceoLabs/oblivious-linear-scan-map.git", rev = "9f84088" }
+oblivious-linear-scan-map = { git = "https://github.com/TaceoLabs/oblivious-linear-scan-map.git", rev = "03dd158" }
 parking_lot = "0.12"
 rand = { version = "0.8" }
 rand_chacha = { version = "0.3" }
