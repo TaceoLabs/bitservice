@@ -317,5 +317,5 @@ contract RpAccountRegistry is
      *
      */
 
-    uint256[43] private __gap;
+    uint256[40] private __gap;
 }
