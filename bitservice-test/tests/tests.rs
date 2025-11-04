@@ -1,9 +1,10 @@
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
+use ark_groth16::ProvingKey;
+use ark_serialize::CanonicalDeserialize as _;
 use bitservice_client::Value;
 use bitservice_test::postgres_testcontainer;
-use co_noir_to_r1cs::noir::{r1cs, ultrahonk};
-use rand::{Rng, SeedableRng as _, rngs::StdRng};
+use rand::Rng;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn nullifier_e2e_test() -> eyre::Result<()> {
@@ -23,10 +24,12 @@ async fn nullifier_e2e_test() -> eyre::Result<()> {
         .collect::<eyre::Result<Vec<_>>>()?
         .try_into()
         .expect("len is 3");
-    let read_program = ultrahonk::get_program_artifact(dir.join("../oblivious_map_read.json"))?;
-    let (_, read_pk, _) = r1cs::setup_r1cs(read_program, &mut StdRng::from_seed([0; 32]))?;
-    let write_program = ultrahonk::get_program_artifact(dir.join("../oblivious_map_write.json"))?;
-    let (_, write_pk, _) = r1cs::setup_r1cs(write_program, &mut StdRng::from_seed([0; 32]))?;
+    let read_pk = ProvingKey::deserialize_compressed(File::open(
+        dir.join("../artifacts/oblivious_map_read_pk.bin"),
+    )?)?;
+    let write_pk = ProvingKey::deserialize_compressed(File::open(
+        dir.join("../artifacts/oblivious_map_write_pk.bin"),
+    )?)?;
 
     println!("starting server...");
     let server_url = bitservice_test::start_server().await;

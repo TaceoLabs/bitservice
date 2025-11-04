@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::{fs::File, sync::Arc};
 
+use ark_groth16::ProvingKey;
+use ark_serialize::CanonicalDeserialize;
 use axum::serve::ListenerExt as _;
-use co_noir_to_r1cs::noir::{r1cs, ultrahonk};
+use circom_types::groth16::ConstraintMatricesWrapper;
 use oblivious_linear_scan_map::Groth16Material;
-use rand::{SeedableRng as _, rngs::StdRng};
 use secrecy::ExposeSecret;
 
 use crate::{
@@ -34,13 +35,23 @@ pub async fn start(config: BitservicePeerConfig) -> eyre::Result<()> {
 
     let crypto_device = Arc::new(CryptoDevice::new(config.secret_key_path)?);
 
-    let read_program = ultrahonk::get_program_artifact(&config.oblivious_map_read_circuit_path)?;
-    let (proof_schema, pk, cs) = r1cs::setup_r1cs(read_program, &mut StdRng::from_seed([0; 32]))?;
-    let read_groth16 = Groth16Material::new(proof_schema, cs, pk);
+    let proof_schema =
+        serde_json::from_reader(File::open(&config.oblivious_map_read_proof_schema_path)?)?;
+    let matrices = ConstraintMatricesWrapper::deserialize_compressed(File::open(
+        &config.oblivious_map_read_matrices_path,
+    )?)?
+    .0;
+    let pk = ProvingKey::deserialize_compressed(File::open(&config.oblivious_map_read_pk_path)?)?;
+    let read_groth16 = Groth16Material::new(proof_schema, matrices, pk);
 
-    let write_program = ultrahonk::get_program_artifact(&config.oblivious_map_write_circuit_path)?;
-    let (proof_schema, pk, cs) = r1cs::setup_r1cs(write_program, &mut StdRng::from_seed([0; 32]))?;
-    let write_groth16 = Groth16Material::new(proof_schema, cs, pk);
+    let proof_schema =
+        serde_json::from_reader(File::open(&config.oblivious_map_write_proof_schema_path)?)?;
+    let matrices = ConstraintMatricesWrapper::deserialize_compressed(File::open(
+        &config.oblivious_map_write_matrices_path,
+    )?)?
+    .0;
+    let pk = ProvingKey::deserialize_compressed(File::open(&config.oblivious_map_write_pk_path)?)?;
+    let write_groth16 = Groth16Material::new(proof_schema, matrices, pk);
 
     let app_state = AppState {
         ban_service: BanService::new(

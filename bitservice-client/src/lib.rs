@@ -7,7 +7,6 @@ use bitservice_types::{
     read::{PeerReadRequest, ReadRequest, ReadResponse},
     unban::{PeerUnbanRequest, UnbanRequest, UnbanResponse},
 };
-use co_noir_to_r1cs::noir::r1cs;
 use crypto_box::PublicKey;
 use mpc_core::protocols::{
     rep3,
@@ -115,21 +114,28 @@ impl Client {
         let value = (res0.value + res1.value + res2.value).a;
 
         // verify the proofs
-        assert!(r1cs::verify(
-            &self.read_vk,
+        let vk = ark_groth16::prepare_verifying_key(&self.read_vk);
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res0.proof.into(),
-            &[res0.root, res0.commitment]
-        )?);
-        assert!(r1cs::verify(
-            &self.read_vk,
+            &[res0.root, res0.commitment],
+        )? {
+            eyre::bail!("invalid proof");
+        }
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res1.proof.into(),
-            &[res1.root, res1.commitment]
-        )?);
-        assert!(r1cs::verify(
-            &self.read_vk,
+            &[res1.root, res1.commitment],
+        )? {
+            eyre::bail!("invalid proof");
+        }
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res2.proof.into(),
-            &[res2.root, res2.commitment]
-        )?);
+            &[res2.root, res2.commitment],
+        )? {
+            eyre::bail!("invalid proof");
+        }
 
         value.try_into()
     }
@@ -190,36 +196,43 @@ impl Client {
         } = res.json::<BanResponse>().await?;
 
         // verify the proofs
-        assert!(r1cs::verify(
-            &self.write_vk,
+        let vk = ark_groth16::prepare_verifying_key(&self.write_vk);
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res0.proof.into(),
             &[
                 res0.old_root,
                 res0.new_root,
                 res0.commitment_key,
-                res0.commitment_value
-            ]
-        )?);
-        assert!(r1cs::verify(
-            &self.write_vk,
+                res0.commitment_value,
+            ],
+        )? {
+            eyre::bail!("invalid proof");
+        }
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res1.proof.into(),
             &[
                 res1.old_root,
                 res1.new_root,
                 res1.commitment_key,
-                res1.commitment_value
-            ]
-        )?);
-        assert!(r1cs::verify(
-            &self.write_vk,
+                res1.commitment_value,
+            ],
+        )? {
+            eyre::bail!("invalid proof");
+        }
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res2.proof.into(),
             &[
                 res2.old_root,
                 res2.new_root,
                 res2.commitment_key,
-                res2.commitment_value
-            ]
-        )?);
+                res2.commitment_value,
+            ],
+        )? {
+            eyre::bail!("invalid proof");
+        }
 
         Ok(())
     }
@@ -280,36 +293,43 @@ impl Client {
         } = res.json::<UnbanResponse>().await?;
 
         // verify the proofs
-        assert!(r1cs::verify(
-            &self.write_vk,
+        let vk = ark_groth16::prepare_verifying_key(&self.write_vk);
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res0.proof.into(),
             &[
                 res0.old_root,
                 res0.new_root,
                 res0.commitment_key,
-                res0.commitment_value
-            ]
-        )?);
-        assert!(r1cs::verify(
-            &self.write_vk,
+                res0.commitment_value,
+            ],
+        )? {
+            eyre::bail!("invalid proof");
+        }
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res1.proof.into(),
             &[
                 res1.old_root,
                 res1.new_root,
                 res1.commitment_key,
-                res1.commitment_value
-            ]
-        )?);
-        assert!(r1cs::verify(
-            &self.write_vk,
+                res1.commitment_value,
+            ],
+        )? {
+            eyre::bail!("invalid proof");
+        }
+        if !ark_groth16::Groth16::<Bn254>::verify_proof(
+            &vk,
             &res2.proof.into(),
             &[
                 res2.old_root,
                 res2.new_root,
                 res2.commitment_key,
-                res2.commitment_value
-            ]
-        )?);
+                res2.commitment_value,
+            ],
+        )? {
+            eyre::bail!("invalid proof");
+        }
 
         Ok(())
     }

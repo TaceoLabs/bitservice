@@ -1,10 +1,10 @@
-use std::process::ExitCode;
+use std::{fs::File, process::ExitCode};
 
 use ark_ff::UniformRand as _;
+use ark_groth16::ProvingKey;
+use ark_serialize::CanonicalDeserialize;
 use bitservice_client::config::{BitserviceClientCommand, BitserviceClientConfig};
 use clap::Parser;
-use co_noir_to_r1cs::noir::{r1cs, ultrahonk};
-use rand::{SeedableRng as _, rngs::StdRng};
 
 #[tokio::main]
 async fn main() -> eyre::Result<ExitCode> {
@@ -15,11 +15,10 @@ async fn main() -> eyre::Result<ExitCode> {
 
     let config = BitserviceClientConfig::parse();
 
-    let read_program = ultrahonk::get_program_artifact(&config.oblivious_map_read_circuit_path)?;
-    let (_, read_pk, _) = r1cs::setup_r1cs(read_program, &mut StdRng::from_seed([0; 32]))?;
-
-    let write_program = ultrahonk::get_program_artifact(&config.oblivious_map_write_circuit_path)?;
-    let (_, write_pk, _) = r1cs::setup_r1cs(write_program, &mut StdRng::from_seed([0; 32]))?;
+    let read_pk =
+        ProvingKey::deserialize_compressed(File::open(&config.oblivious_map_read_pk_path)?)?;
+    let write_pk =
+        ProvingKey::deserialize_compressed(File::open(&config.oblivious_map_write_pk_path)?)?;
 
     if config.public_key_paths.len() != 3 {
         eyre::bail!("must provide exactly 3 public key paths");

@@ -49,8 +49,15 @@ async fn start_peer(id: u8, db_url: &str) -> String {
         next_peer: format!("ws://localhost:1{next_id:04}/api/v1/ws"),
         tcp_next_peer: format!("127.0.0.1:11{next_id:03}").parse().unwrap(),
         prev_peer_wait_timeout: Duration::from_secs(10),
-        oblivious_map_read_circuit_path: dir.join("../oblivious_map_read.json"),
-        oblivious_map_write_circuit_path: dir.join("../oblivious_map_write.json"),
+        oblivious_map_read_pk_path: dir.join("../artifacts/oblivious_map_read_pk.bin"),
+        oblivious_map_read_matrices_path: dir.join("../artifacts/oblivious_map_read_matrices.bin"),
+        oblivious_map_read_proof_schema_path: dir
+            .join("../artifacts/oblivious_map_read_proof_schema.json"),
+        oblivious_map_write_pk_path: dir.join("../artifacts/oblivious_map_write_pk.bin"),
+        oblivious_map_write_matrices_path: dir
+            .join("../artifacts/oblivious_map_write_matrices.bin"),
+        oblivious_map_write_proof_schema_path: dir
+            .join("../artifacts/oblivious_map_write_proof_schema.json"),
         secret_key_path: dir.join(format!("../dev-keys/peer{id}.sk")),
         db_url: db_url.into(),
     };

@@ -987,11 +987,11 @@ dependencies = [
  "ark-bn254",
  "ark-ff 0.5.0",
  "ark-groth16",
+ "ark-serialize 0.5.0",
  "base64 0.22.1",
  "bincode 2.0.1",
  "bitservice-types",
  "clap",
- "co-noir-to-r1cs",
  "crypto_box",
  "eyre",
  "mpc-core",
@@ -1008,14 +1008,15 @@ dependencies = [
 name = "bitservice-peer"
 version = "0.1.0"
 dependencies = [
+ "ark-groth16",
  "ark-serialize 0.5.0",
  "axum",
  "axum-test",
  "base64 0.22.1",
  "bincode 2.0.1",
  "bitservice-types",
+ "circom-types",
  "clap",
- "co-noir-to-r1cs",
  "crypto_box",
  "eyre",
  "git-version",
@@ -1029,6 +1030,7 @@ dependencies = [
  "rustls",
  "secrecy",
  "serde",
+ "serde_json",
  "sqlx",
  "tcp-mpc-net",
  "thiserror 2.0.17",
@@ -1069,10 +1071,11 @@ dependencies = [
 name = "bitservice-test"
 version = "0.1.0"
 dependencies = [
+ "ark-groth16",
+ "ark-serialize 0.5.0",
  "bitservice-client",
  "bitservice-peer",
  "bitservice-server",
- "co-noir-to-r1cs",
  "crypto_box",
  "eyre",
  "rand 0.8.5",
@@ -1774,7 +1777,7 @@ dependencies = [
 [[package]]
 name = "co-noir-to-r1cs"
 version = "0.1.0"
-source = "git+https://github.com/TaceoLabs/CoNoir-to-R1CS?rev=ac58c2b#ac58c2bb14046804c941c459b28e6f01357c8012"
+source = "git+https://github.com/TaceoLabs/CoNoir-to-R1CS?rev=b752c84#b752c843f42cb867e85735abbb5edb2fb86442a9"
 dependencies = [
  "acir",
  "ark-bn254",
@@ -1784,6 +1787,9 @@ dependencies = [
  "ark-groth16",
  "ark-poly",
  "ark-relations",
+ "ark-serialize 0.5.0",
+ "circom-types",
+ "clap",
  "co-acvm",
  "co-builder",
  "co-circom",
@@ -1799,6 +1805,7 @@ dependencies = [
  "num-bigint 0.4.6",
  "rand 0.8.5",
  "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -4748,7 +4755,7 @@ dependencies = [
 [[package]]
 name = "oblivious-linear-scan-map"
 version = "0.1.0"
-source = "git+https://github.com/TaceoLabs/oblivious-linear-scan-map.git?rev=03dd158#03dd158bc357b9b5091d9ac38e26017568ad40d2"
+source = "git+https://github.com/TaceoLabs/oblivious-linear-scan-map.git?rev=6eb3067#6eb3067307c082f324e0e95c65b5d8e52180358f"
 dependencies = [
  "ark-bn254",
  "ark-ff 0.5.0",

@@ -22,21 +22,21 @@ pub struct BitserviceClientConfig {
     )]
     pub server_url: String,
 
-    /// The path to the compiled noir read circuit
+    /// The path to the read proving key
     #[clap(
         long,
-        env = "BITSERVICE_CLIENT_OBLIVIOUS_MAP_READ_CIRCUIT_PATH",
-        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../oblivious_map_read.json")
+        env = "BITSERVICE_CLIENT_OBLIVIOUS_MAP_READ_PK_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_read_pk.bin")
     )]
-    pub oblivious_map_read_circuit_path: PathBuf,
+    pub oblivious_map_read_pk_path: PathBuf,
 
-    /// The path to the compiled noir write circuit
+    /// The path to the write proving key
     #[clap(
         long,
-        env = "BITSERVICE_CLIENT_OBLIVIOUS_MAP_WRITE_CIRCUIT_PATH",
-        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../oblivious_map_write.json")
+        env = "BITSERVICE_CLIENT_OBLIVIOUS_MAP_WRITE_PK_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_write_pk.bin")
     )]
-    pub oblivious_map_write_circuit_path: PathBuf,
+    pub oblivious_map_write_pk_path: PathBuf,
 
     /// The RP id
     #[clap(long, env = "BITSERVICE_CLIENT_RP_ID")]

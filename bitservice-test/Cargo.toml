@@ -11,10 +11,11 @@ publish.workspace = true
 readme.workspace = true
 
 [dependencies]
+ark-groth16.workspace = true
+ark-serialize.workspace = true
 bitservice-peer.workspace = true
 bitservice-server.workspace = true
 bitservice-client.workspace = true
-co-noir-to-r1cs.workspace = true
 crypto_box = { workspace = true, features = ["seal"] }
 eyre.workspace = true
 rand.workspace = true

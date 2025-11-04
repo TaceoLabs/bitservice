@@ -62,21 +62,53 @@ pub struct BitservicePeerConfig {
     )]
     pub prev_peer_wait_timeout: Duration,
 
-    /// The path to the compiled noir read circuit
+    /// The path to the read proving key
     #[clap(
         long,
-        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_READ_CIRCUIT_PATH",
-        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../oblivious_map_read.json")
+        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_READ_PK_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_read_pk.bin")
     )]
-    pub oblivious_map_read_circuit_path: PathBuf,
+    pub oblivious_map_read_pk_path: PathBuf,
 
-    /// The path to the compiled noir write circuit
+    /// The path to the read constraint matrices
     #[clap(
         long,
-        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_WRITE_CIRCUIT_PATH",
-        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../oblivious_map_write.json")
+        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_READ_MATRICES_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_read_matrices.bin")
     )]
-    pub oblivious_map_write_circuit_path: PathBuf,
+    pub oblivious_map_read_matrices_path: PathBuf,
+
+    /// The path to the read proof schema
+    #[clap(
+        long,
+        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_READ_PROOF_SCHEMA_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_read_proof_schema.json")
+    )]
+    pub oblivious_map_read_proof_schema_path: PathBuf,
+
+    /// The path to the write proving key
+    #[clap(
+        long,
+        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_WRITE_PK_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_write_pk.bin")
+    )]
+    pub oblivious_map_write_pk_path: PathBuf,
+
+    /// The path to the write constraint matrices
+    #[clap(
+        long,
+        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_WRITE_MATRICES_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_write_matrices.bin")
+    )]
+    pub oblivious_map_write_matrices_path: PathBuf,
+
+    /// The path to the write proof schema
+    #[clap(
+        long,
+        env = "BITSERVICE_PEER_OBLIVIOUS_MAP_WRITE_PROOF_SCHEMA_PATH",
+        default_value = concat!(env!("CARGO_MANIFEST_DIR"),"/../artifacts/oblivious_map_write_proof_schema.json")
+    )]
+    pub oblivious_map_write_proof_schema_path: PathBuf,
 
     // TODO probably move to AWS secrets manager
     /// The path to the peer secret key
