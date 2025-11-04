@@ -1,0 +1,28 @@
+services:
+  postgres-peer0:
+    container_name: "postgres-peer0"
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "8000:5432"
+  postgres-peer1:
+    container_name: "postgres-peer1"
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "8001:5432"
+  postgres-peer2:
+    container_name: "postgres-peer2"
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "8002:5432"
