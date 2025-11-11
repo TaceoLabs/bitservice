@@ -41,6 +41,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Environment variables
 dotenv = "0.15"
 
+world-id-primitives = { git = "https://github.com/worldcoin/world-id-protocol" }
+
 [dev-dependencies]
 tempfile = "3"
 

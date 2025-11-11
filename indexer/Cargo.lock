@@ -873,15 +873,49 @@ checksum = "1f3a13b34da09176a8baba701233fdffbaa7c1b1192ce031a3da4e55ce1f1a56"
 dependencies = [
  "ark-ec 0.4.2",
  "ark-ff 0.4.2",
- "ark-relations",
+ "ark-relations 0.4.0",
  "ark-serialize 0.4.2",
- "ark-snark",
+ "ark-snark 0.4.0",
  "ark-std 0.4.0",
  "blake2",
  "derivative",
  "digest 0.10.7",
  "rayon",
  "sha2",
+]
+
+[[package]]
+name = "ark-crypto-primitives"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e0c292754729c8a190e50414fd1a37093c786c709899f29c9f7daccecfa855e"
+dependencies = [
+ "ahash",
+ "ark-crypto-primitives-macros",
+ "ark-ec 0.5.0",
+ "ark-ff 0.5.0",
+ "ark-relations 0.5.1",
+ "ark-serialize 0.5.0",
+ "ark-snark 0.5.1",
+ "ark-std 0.5.0",
+ "blake2",
+ "derivative",
+ "digest 0.10.7",
+ "fnv",
+ "merlin",
+ "rayon",
+ "sha2",
+]
+
+[[package]]
+name = "ark-crypto-primitives-macros"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7e89fe77d1f0f4fe5b96dfc940923d88d17b6a773808124f21e764dfb063c6a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.110",
 ]
 
 [[package]]
@@ -920,6 +954,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "rayon",
  "zeroize",
 ]
 
@@ -979,6 +1014,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "paste",
+ "rayon",
  "zeroize",
 ]
 
@@ -1056,13 +1092,29 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20ceafa83848c3e390f1cbf124bc3193b3e639b3f02009e0e290809a501b95fc"
 dependencies = [
- "ark-crypto-primitives",
+ "ark-crypto-primitives 0.4.0",
  "ark-ec 0.4.2",
  "ark-ff 0.4.2",
  "ark-poly 0.4.2",
- "ark-relations",
+ "ark-relations 0.4.0",
  "ark-serialize 0.4.2",
  "ark-std 0.4.0",
+ "rayon",
+]
+
+[[package]]
+name = "ark-groth16"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88f1d0f3a534bb54188b8dcc104307db6c56cdae574ddc3212aec0625740fc7e"
+dependencies = [
+ "ark-crypto-primitives 0.5.0",
+ "ark-ec 0.5.0",
+ "ark-ff 0.5.0",
+ "ark-poly 0.5.0",
+ "ark-relations 0.5.1",
+ "ark-serialize 0.5.0",
+ "ark-std 0.5.0",
  "rayon",
 ]
 
@@ -1093,6 +1145,7 @@ dependencies = [
  "educe",
  "fnv",
  "hashbrown 0.15.5",
+ "rayon",
 ]
 
 [[package]]
@@ -1103,6 +1156,18 @@ checksum = "00796b6efc05a3f48225e59cb6a2cda78881e7c390872d5786aaf112f31fb4f0"
 dependencies = [
  "ark-ff 0.4.2",
  "ark-std 0.4.0",
+ "tracing",
+ "tracing-subscriber 0.2.25",
+]
+
+[[package]]
+name = "ark-relations"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec46ddc93e7af44bcab5230937635b06fb5744464dd6a7e7b083e80ebd274384"
+dependencies = [
+ "ark-ff 0.5.0",
+ "ark-std 0.5.0",
  "tracing",
  "tracing-subscriber 0.2.25",
 ]
@@ -1140,6 +1205,7 @@ dependencies = [
  "arrayvec",
  "digest 0.10.7",
  "num-bigint",
+ "rayon",
 ]
 
 [[package]]
@@ -1171,9 +1237,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84d3cc6833a335bb8a600241889ead68ee89a3cf8448081fb7694c0fe503da63"
 dependencies = [
  "ark-ff 0.4.2",
- "ark-relations",
+ "ark-relations 0.4.0",
  "ark-serialize 0.4.2",
  "ark-std 0.4.0",
+]
+
+[[package]]
+name = "ark-snark"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d368e2848c2d4c129ce7679a7d0d2d612b6a274d3ea6a13bad4445d61b381b88"
+dependencies = [
+ "ark-ff 0.5.0",
+ "ark-relations 0.5.1",
+ "ark-serialize 0.5.0",
+ "ark-std 0.5.0",
 ]
 
 [[package]]
@@ -1205,7 +1283,14 @@ checksum = "246a225cc6131e9ee4f24619af0f19d67761fff15d7ccc22e42b80846e69449a"
 dependencies = [
  "num-traits",
  "rand 0.8.5",
+ "rayon",
 ]
+
+[[package]]
+name = "arrayref"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
 
 [[package]]
 name = "arrayvec"
@@ -1463,6 +1548,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "blake3"
+version = "1.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3888aaa89e4b2a40fca9848e400f6a658a5a3978de7be858e209cafa8be9a4a0"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1671,6 +1769,12 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "constant_time_eq"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "core-foundation-sys"
@@ -3002,6 +3106,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "merlin"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58c38e2799fc0978b65dfff8023ec7843e2330bb462f19198840b34b6582397d"
+dependencies = [
+ "byteorder",
+ "keccak",
+ "rand_core 0.6.4",
+ "zeroize",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3766,6 +3882,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber 0.3.20",
+ "world-id-primitives",
 ]
 
 [[package]]
@@ -4013,11 +4130,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fc71326fe22d96143be74b4bdd4b5dec4f71337243fb15e1f53fd708e4e8c84"
 dependencies = [
  "ark-bn254 0.4.0",
- "ark-crypto-primitives",
+ "ark-crypto-primitives 0.4.0",
  "ark-ff 0.4.2",
- "ark-groth16",
+ "ark-groth16 0.4.0",
  "ark-poly 0.4.2",
- "ark-relations",
+ "ark-relations 0.4.0",
  "ark-serialize 0.4.2",
  "ark-std 0.4.0",
  "byteorder",
@@ -4058,8 +4175,8 @@ dependencies = [
  "ark-bn254 0.4.0",
  "ark-ec 0.4.2",
  "ark-ff 0.4.2",
- "ark-groth16",
- "ark-relations",
+ "ark-groth16 0.4.0",
+ "ark-relations 0.4.0",
  "ark-std 0.4.0",
  "bytemuck",
  "color-eyre",
@@ -4646,6 +4763,51 @@ dependencies = [
  "libc",
  "thiserror 1.0.69",
  "walkdir",
+]
+
+[[package]]
+name = "taceo-ark-babyjubjub"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f404332979db17b044cb8eb92bd471d993ed8713ffb08dc9b3f459414123a499"
+dependencies = [
+ "ark-bn254 0.5.0",
+ "ark-ec 0.5.0",
+ "ark-ff 0.5.0",
+ "ark-std 0.5.0",
+]
+
+[[package]]
+name = "taceo-ark-serde-compat"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "070074111809a0c9344738814302f6271bd79bb38cc1427e889c2b063e66e5e0"
+dependencies = [
+ "ark-bn254 0.5.0",
+ "ark-ec 0.5.0",
+ "serde",
+ "taceo-ark-babyjubjub",
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "taceo-eddsa-babyjubjub"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "791e41273cc025e07fbca9fcd1d143a3d8cbe3515de8aa6dab91549c9a0af245"
+dependencies = [
+ "ark-ec 0.5.0",
+ "ark-ff 0.5.0",
+ "ark-serialize 0.5.0",
+ "blake3",
+ "eyre",
+ "num-bigint",
+ "rand 0.8.5",
+ "serde",
+ "taceo-ark-babyjubjub",
+ "taceo-ark-serde-compat",
+ "taceo-poseidon2",
+ "zeroize",
 ]
 
 [[package]]
@@ -5669,6 +5831,27 @@ name = "wit-bindgen"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
+
+[[package]]
+name = "world-id-primitives"
+version = "0.1.0"
+source = "git+https://github.com/worldcoin/world-id-protocol#c70b54db38c39dd418a9fd1551c7e23610d5e08e"
+dependencies = [
+ "alloy-primitives",
+ "ark-bn254 0.5.0",
+ "ark-ff 0.5.0",
+ "ark-groth16 0.5.0",
+ "ark-serialize 0.5.0",
+ "hex",
+ "k256",
+ "ruint",
+ "serde",
+ "serde_json",
+ "taceo-ark-babyjubjub",
+ "taceo-ark-serde-compat",
+ "taceo-eddsa-babyjubjub",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "writeable"

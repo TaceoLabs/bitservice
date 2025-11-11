@@ -14,7 +14,7 @@ use semaphore_rs_hasher::Hasher;
 use semaphore_rs_trees::lazy::{Canonical, LazyMerkleTree as MerkleTree};
 use semaphore_rs_trees::proof::InclusionProof;
 use semaphore_rs_trees::Branch;
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tokio::sync::RwLock;
 
 // Contract events
@@ -26,6 +26,28 @@ sol! {
         event RootRecorded(uint256 indexed root, uint256 timestamp, uint256 indexed rootEpoch);
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct AccountAddedEvent {
+    pub account_index: U256,
+    pub identity_commitment: U256,
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountUpdatedEvent {
+    pub account_index: U256,
+    pub old_identity_commitment: U256,
+    pub new_identity_commitment: U256,
+}
+
+#[derive(Debug, Clone)]
+pub struct RootRecordedEvent {
+    pub root: U256,
+    pub timestamp: U256,
+    pub root_epoch: U256,
+}
+
+//TODO: Add RootValidityWindowUpdatedEvent...
 
 // Tree configuration
 // TODO: Important we need to always sync this with whatever constant is onchain..
@@ -86,18 +108,18 @@ impl Config {
 static LATEST_ROOT: LazyLock<RwLock<RootInfo>> = LazyLock::new(|| {
     RwLock::new(RootInfo {
         root: U256::ZERO,
-        timestamp: 0,
-        epoch: 0,
-        block_number: 0,
+        timestamp: U256::ZERO,
+        epoch: U256::ZERO,
+        block_number: U256::ZERO,
     })
 });
 
 #[derive(Debug, Clone)]
 struct RootInfo {
     root: U256,
-    timestamp: u64,
-    epoch: u64,
-    block_number: u64,
+    timestamp: U256,
+    epoch: U256,
+    block_number: U256,
 }
 
 // Main indexer entry point
@@ -245,6 +267,41 @@ async fn index_events(cfg: &Config, pool: &PgPool) -> anyhow::Result<()> {
     }
 }
 
+pub fn decode_account_added(lg: &alloy::rpc::types::Log) -> anyhow::Result<AccountAddedEvent> {
+    let prim = alloy_primitives::Log::new(lg.address(), lg.topics().to_vec(), lg.data().data.clone())
+        .ok_or_else(|| anyhow::anyhow!("invalid log for decoding"))?;
+    let typed = RpAccountRegistry::AccountAdded::decode_log(&prim)?;
+
+    Ok(AccountAddedEvent {
+        account_index: typed.data.accountIndex,
+        identity_commitment: typed.data.identityCommitment,
+    })
+}
+
+pub fn decode_account_updated(lg: &alloy::rpc::types::Log) -> anyhow::Result<AccountUpdatedEvent> {
+    let prim = alloy_primitives::Log::new(lg.address(), lg.topics().to_vec(), lg.data().data.clone())
+        .ok_or_else(|| anyhow::anyhow!("invalid log for decoding"))?;
+    let typed = RpAccountRegistry::AccountUpdated::decode_log(&prim)?;
+
+    Ok(AccountUpdatedEvent {
+        account_index: typed.data.accountIndex,
+        old_identity_commitment: typed.data.oldIdentityCommitment,
+        new_identity_commitment: typed.data.newIdentityCommitment,
+    })
+}
+
+pub fn decode_root_recorded(lg: &alloy::rpc::types::Log) -> anyhow::Result<RootRecordedEvent> {
+    let prim = alloy_primitives::Log::new(lg.address(), lg.topics().to_vec(), lg.data().data.clone())
+        .ok_or_else(|| anyhow::anyhow!("invalid log for decoding"))?;
+    let typed = RpAccountRegistry::RootRecorded::decode_log(&prim)?;
+
+    Ok(RootRecordedEvent {
+        root: typed.data.root,
+        timestamp: typed.data.timestamp,
+        root_epoch: typed.data.rootEpoch,
+    })
+}
+
 async fn process_log(pool: &PgPool, log: &alloy::rpc::types::Log) -> anyhow::Result<()> {
     if log.topics().is_empty() {
         return Ok(());
@@ -255,32 +312,32 @@ async fn process_log(pool: &PgPool, log: &alloy::rpc::types::Log) -> anyhow::Res
     let tx_hash = format!("{:?}", log.transaction_hash.unwrap_or_default());
 
     if sig == RpAccountRegistry::AccountAdded::SIGNATURE_HASH {
-        let event = RpAccountRegistry::AccountAdded::decode_log(log.log_decode()?, true)?;
+        let event = decode_account_added(log)?;
 
         sqlx::query(
             r#"INSERT INTO accounts (account_index, identity_commitment, block_number, tx_hash)
                VALUES ($1, $2, $3, $4)
                ON CONFLICT (account_index) DO NOTHING"#
         )
-        .bind(event.accountIndex.to_string())
-        .bind(event.identityCommitment.to_string())
-        .bind(block_number as i64)
+        .bind(event.account_index.to_string())
+        .bind(event.identity_commitment.to_string())
+        .bind(block_number.to_string())
         .bind(&tx_hash)
         .execute(pool)
         .await?;
 
         // Update merkle tree
-        if let Err(e) = update_tree_with_account(event.accountIndex, event.identityCommitment).await {
+        if let Err(e) = update_tree_with_account(event.account_index, event.identity_commitment).await {
             tracing::error!(?e, "Failed to update tree for AccountAdded");
         }
 
         tracing::info!(
-            account_index = %event.accountIndex,
+            account_index = %event.account_index,
             "Account added"
         );
 
     } else if sig == RpAccountRegistry::AccountUpdated::SIGNATURE_HASH {
-        let event = RpAccountRegistry::AccountUpdated::decode_log(log.log_decode()?, true)?;
+        let event = decode_account_updated(log)?;
 
         sqlx::query(
             r#"UPDATE accounts
@@ -290,9 +347,9 @@ async fn process_log(pool: &PgPool, log: &alloy::rpc::types::Log) -> anyhow::Res
                    updated_at = NOW()
                WHERE account_index = $1"#
         )
-        .bind(event.accountIndex.to_string())
-        .bind(event.newIdentityCommitment.to_string())
-        .bind(block_number as i64)
+        .bind(event.account_index.to_string())
+        .bind(event.new_identity_commitment.to_string())
+        .bind(block_number.to_string())
         .bind(&tx_hash)
         .execute(pool)
         .await?;
@@ -300,38 +357,38 @@ async fn process_log(pool: &PgPool, log: &alloy::rpc::types::Log) -> anyhow::Res
         // Log the update event
         sqlx::query(
             r#"INSERT INTO account_updates
-               (account_index, old_commitment, new_commitment, block_number, tx_hash)
+               (account_index, old_identity_commitment, new_identity_commitment, block_number, tx_hash)
                VALUES ($1, $2, $3, $4, $5)"#
         )
-        .bind(event.accountIndex.to_string())
-        .bind(event.oldIdentityCommitment.to_string())
-        .bind(event.newIdentityCommitment.to_string())
-        .bind(block_number as i64)
+        .bind(event.account_index.to_string())
+        .bind(event.old_identity_commitment.to_string())
+        .bind(event.new_identity_commitment.to_string())
+        .bind(block_number.to_string())
         .bind(&tx_hash)
         .execute(pool)
         .await?;
 
         // Update merkle tree
-        if let Err(e) = update_tree_with_account(event.accountIndex, event.newIdentityCommitment).await {
+        if let Err(e) = update_tree_with_account(event.account_index, event.new_identity_commitment).await {
             tracing::error!(?e, "Failed to update tree for AccountUpdated");
         }
 
         tracing::info!(
-            account_index = %event.accountIndex,
+            account_index = %event.account_index,
             "Account updated"
         );
 
     } else if sig == RpAccountRegistry::RootRecorded::SIGNATURE_HASH {
-        let event = RpAccountRegistry::RootRecorded::decode_log(log.log_decode()?, true)?;
+        let event = decode_root_recorded(log)?;
 
         sqlx::query(
             r#"INSERT INTO roots (root, timestamp, epoch, block_number, tx_hash)
                VALUES ($1, $2, $3, $4, $5)"#
         )
         .bind(event.root.to_string())
-        .bind(event.timestamp as i64)
-        .bind(event.rootEpoch as i64)
-        .bind(block_number as i64)
+        .bind(event.timestamp.to_string())
+        .bind(event.root_epoch.to_string())
+        .bind(block_number.to_string())
         .bind(&tx_hash)
         .execute(pool)
         .await?;
@@ -341,8 +398,8 @@ async fn process_log(pool: &PgPool, log: &alloy::rpc::types::Log) -> anyhow::Res
         *root_info = RootInfo {
             root: event.root,
             timestamp: event.timestamp,
-            epoch: event.rootEpoch,
-            block_number,
+            epoch: event.root_epoch,
+            block_number: U256::from(block_number),
         };
 
         // Verify our computed root matches the contract's root
@@ -353,14 +410,14 @@ async fn process_log(pool: &PgPool, log: &alloy::rpc::types::Log) -> anyhow::Res
 
         if our_root != event.root {
             tracing::warn!(
-                contract_root = %event.root,
-                computed_root = %our_root,
+                contract_root = %format!("0x{:x}", event.root),
+                computed_root = %format!("0x{:x}", our_root),
                 "Root mismatch - our computed root differs from contract"
             );
         } else {
             tracing::info!(
-                root = %event.root,
-                epoch = event.rootEpoch,
+                root = %format!("0x{:x}", event.root),
+                root_epoch = %format!("0x{:x}", event.root_epoch),
                 "Root recorded and verified"
             );
         }
