@@ -1,0 +1,77 @@
+[workspace]
+members = [
+    "bitservice-client",
+    "bitservice-peer",
+    "bitservice-server",
+    "bitservice-test",
+    "bitservice-types",
+    "tcp-mpc-net",
+    "ws-mpc-net",
+]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+authors = ["TACEO GmbH <hello@taceo.io>"]
+homepage = "https://www.taceo.io"
+repository = "https://github.com/TaceoLabs/bitservice"
+license = "MIT OR Apache-2.0"
+publish = false
+readme = "./README.md"
+
+[workspace.dependencies]
+ark-bn254 = "0.5"
+ark-ec = "0.5"
+ark-ff = "0.5"
+ark-groth16 = "0.5"
+ark-serde-compat = { package = "taceo-ark-serde-compat", version = "0.1" }
+ark-serialize = "0.5"
+axum = "0.8"
+axum-test = "18"
+base64 = "0.22"
+bincode = "2"
+bitservice-types = { path = "bitservice-types" }
+bitservice-peer = { path = "bitservice-peer" }
+bitservice-server = { path = "bitservice-server" }
+bitservice-client = { path = "bitservice-client" }
+circom-types = { git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969", default-features = false }
+clap = "4"
+crypto_box = "0.9"
+eyre = { version = "0.6" }
+futures = "0.3"
+git-version = "0.3"
+http = "1"
+humantime = "2"
+itertools = "0.14"
+metrics = "0.24"
+mpc-core = { git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+mpc-net = { git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969", default-features = false }
+nodes-telemetry = { git = "https://github.com/TaceoLabs/nodes-telemetry.git", rev = "06f4f13"}
+oblivious-linear-scan-map = { git = "https://github.com/TaceoLabs/oblivious-linear-scan-map.git", rev = "6eb3067" }
+parking_lot = "0.12"
+rand = { version = "0.8" }
+rand_chacha = { version = "0.3" }
+reqwest = { version = "0.12" }
+rustls = "0.23"
+secrecy = "0.10"
+serde = { version = "1" }
+serde_json = { version = "1" }
+sqlx = "0.8"
+tcp-mpc-net = { path = "tcp-mpc-net" }
+thiserror = { version = "2" }
+tokio = { version = "1" }
+tokio-tungstenite = "0.28"
+tokio-util = "0.7"
+toml = "0.9"
+tower-http = "0.6"
+tracing = { version = "0.1" }
+uuid = { version = "1" }
+ws-mpc-net = { path = "ws-mpc-net" }
+
+# This profile can be used for CI in pull requests.
+[profile.ci-dev]
+inherits = "dev"
+opt-level = 1
+incremental = false
+debug = true
